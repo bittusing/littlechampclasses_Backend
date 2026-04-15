@@ -18,9 +18,9 @@ app.use(
   }),
 );
 
-const corsOrigins =
+const corsOrigins: string | string[] =
   env.frontendOrigins.length === 1
-    ? env.frontendOrigins[0]
+    ? env.frontendOrigins[0]!
     : env.frontendOrigins;
 
 app.use(
@@ -30,6 +30,20 @@ app.use(
   }),
 );
 app.use(express.json({ limit: "64kb" }));
+
+/** No Mongo — survives DB misconfig so you can confirm the deployment is live. */
+app.get("/", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "littlechampclasses-backend",
+    api: "/api/health",
+    courses: "/api/courses",
+  });
+});
+
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true, service: "littlechampclasses-backend", db: "mongodb" });
+});
 
 app.use(async (_req, _res, next) => {
   try {
@@ -62,10 +76,6 @@ const bookingLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
-
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "littlechampclasses-backend", db: "mongodb" });
-});
 
 app.use("/api/auth", authLimiter, authRouter);
 app.use("/api/users", usersRouter);

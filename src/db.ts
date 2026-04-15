@@ -18,12 +18,18 @@ if (!globalWithMongoose.__mongooseCache) {
 }
 
 export async function connectDb(): Promise<typeof mongoose> {
-  if (cache.conn) {
+  if (cache.conn?.connection?.readyState === 1) {
     return cache.conn;
   }
   if (!cache.promise) {
     cache.promise = mongoose.connect(env.mongoUri);
   }
-  cache.conn = await cache.promise;
-  return cache.conn;
+  try {
+    cache.conn = await cache.promise;
+    return cache.conn;
+  } catch (err) {
+    cache.promise = null;
+    cache.conn = null;
+    throw err;
+  }
 }

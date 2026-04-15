@@ -38,8 +38,11 @@ export const env = {
     ? requireEnv("JWT_SECRET", process.env.JWT_SECRET)
     : (process.env.JWT_SECRET ?? "dev-only-change-me"),
   /** Comma-separated origins for CORS (no trailing path; www and apex listed separately if needed) */
-  frontendOrigins: frontendRaw
-    .split(",")
-    .map((s) => normalizeOrigin(s))
-    .filter(Boolean),
+  frontendOrigins: (() => {
+    const list = frontendRaw
+      .split(",")
+      .map((s) => normalizeOrigin(s))
+      .filter(Boolean);
+    return list.length > 0 ? list : ["http://localhost:3000"];
+  })(),
 };
