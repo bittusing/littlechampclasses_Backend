@@ -1,8 +1,7 @@
 import cors from "cors";
 import express from "express";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import { connectDb } from "./db.js";
+import { helmet, rateLimit } from "./compat/vendorMiddleware.js";
 import { env } from "./env.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter } from "./routes/bookings.js";
