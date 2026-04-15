@@ -9,10 +9,10 @@ import type { HelmetOptions } from "helmet";
 import rateLimitImport from "express-rate-limit";
 import helmetImport from "helmet";
 
-export const helmet = helmetImport as (
+export const helmet = helmetImport as unknown as (
   options?: Readonly<HelmetOptions>,
 ) => RequestHandler;
 
-export const rateLimit = rateLimitImport as (
+export const rateLimit = rateLimitImport as unknown as (
   options?: Partial<RateLimitOptions>,
 ) => RequestHandler;
