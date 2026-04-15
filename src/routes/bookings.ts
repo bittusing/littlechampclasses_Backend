@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
+import { asyncHandler } from "../util/asyncHandler.js";
 import { Booking } from "../models/Booking.js";
 import { Course } from "../models/Course.js";
 
@@ -66,7 +67,10 @@ function serializePopulatedBooking(b: Record<string, unknown>) {
   };
 }
 
-bookingsRouter.post("/", requireAuth, async (req, res) => {
+bookingsRouter.post(
+  "/",
+  requireAuth,
+  asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten().fieldErrors });
@@ -110,9 +114,13 @@ bookingsRouter.post("/", requireAuth, async (req, res) => {
     return;
   }
   res.status(201).json({ booking: serializePopulatedBooking(populated as Record<string, unknown>) });
-});
+  }),
+);
 
-bookingsRouter.get("/mine", requireAuth, async (req, res) => {
+bookingsRouter.get(
+  "/mine",
+  requireAuth,
+  asyncHandler(async (req, res) => {
   const list = await Booking.find({ user: req.userId })
     .populate("course")
     .sort({ createdAt: -1 })
@@ -121,4 +129,5 @@ bookingsRouter.get("/mine", requireAuth, async (req, res) => {
   res.json({
     bookings: list.map((b) => serializePopulatedBooking(b as Record<string, unknown>)),
   });
-});
+  }),
+);

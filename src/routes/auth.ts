@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { env } from "../env.js";
 import { User } from "../models/User.js";
+import { asyncHandler } from "../util/asyncHandler.js";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -22,7 +23,9 @@ function signToken(userId: string, email: string) {
   return jwt.sign({ sub: userId, email }, env.jwtSecret, { expiresIn: "14d" });
 }
 
-authRouter.post("/register", async (req, res) => {
+authRouter.post(
+  "/register",
+  asyncHandler(async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten().fieldErrors });
@@ -41,9 +44,12 @@ authRouter.post("/register", async (req, res) => {
     token,
     user: { id: user._id.toString(), email: user.email, name: user.name },
   });
-});
+  }),
+);
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post(
+  "/login",
+  asyncHandler(async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten().fieldErrors });
@@ -65,4 +71,5 @@ authRouter.post("/login", async (req, res) => {
     token,
     user: { id: user._id.toString(), email: user.email, name: user.name },
   });
-});
+  }),
+);

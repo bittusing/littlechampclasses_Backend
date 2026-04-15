@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { Course } from "../models/Course.js";
+import { asyncHandler } from "../util/asyncHandler.js";
 
 export const coursesRouter = Router();
 
@@ -69,7 +70,9 @@ function mapCourse(c: CourseLean) {
   };
 }
 
-coursesRouter.get("/", async (req, res) => {
+coursesRouter.get(
+  "/",
+  asyncHandler(async (req, res) => {
   /** Query ?featured=1 avoids /featured being eaten by /:slug as slug "featured" (older builds / ordering). */
   const wantFeatured =
     req.query.featured === "1" ||
@@ -91,13 +94,17 @@ coursesRouter.get("/", async (req, res) => {
 
   const list = await Course.find({ isActive: true }).sort({ track: 1, title: 1 }).lean();
   res.json({ courses: list.map((c) => mapCourse(c as CourseLean)) });
-});
+  }),
+);
 
-coursesRouter.get("/:slug", async (req, res) => {
+coursesRouter.get(
+  "/:slug",
+  asyncHandler(async (req, res) => {
   const c = await Course.findOne({ slug: req.params.slug, isActive: true }).lean();
   if (!c) {
     res.status(404).json({ error: "Course not found" });
     return;
   }
   res.json({ course: mapCourse(c as CourseLean) });
-});
+  }),
+);
