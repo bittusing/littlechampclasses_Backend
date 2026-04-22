@@ -2,11 +2,12 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import { env } from "../env.js";
 import { Course } from "../models/Course.js";
+import { CourseBatch } from "../models/CourseBatch.js";
 import { buildDetailDescription } from "./seedData.js";
 
 const T = {
   stories: "/courses/thumb-stories.svg",
-  english: "/courses/thumb-english.svg",
+  english: "/courses/thumb-english.webp",
   maths: "/courses/thumb-maths.svg",
   activity: "/courses/thumb-activity.svg",
   science: "/courses/thumb-science.svg",
@@ -24,6 +25,14 @@ const V = {
 const LIVE_A = 6;
 const LIVE_B = 6;
 const PRICE = 500;
+const BOOK_DEMO_FEATURED = new Set([
+  "after-school-spark-demo",
+  "learn-english-demo",
+  "learn-maths-demo",
+]);
+/** Demo UI: ₹9 current, ₹199 strikethrough (paise). */
+const BOOK_DEMO_PRICE_PAISE = 900;
+const BOOK_DEMO_COMPARE_PAISE = 19900;
 
 const demos = [
   {
@@ -180,12 +189,47 @@ const demos = [
 async function run() {
   await mongoose.connect(env.mongoUri);
   for (const d of demos) {
+    const featured = BOOK_DEMO_FEATURED.has(d.slug);
+    const pricePaise = featured ? BOOK_DEMO_PRICE_PAISE : d.pricePaise;
     await Course.findOneAndUpdate(
       { slug: d.slug },
-      { ...d, isDemo: true, isActive: true },
+      {
+        ...d,
+        pricePaise,
+        compareAtPricePaise: featured ? BOOK_DEMO_COMPARE_PAISE : null,
+        bookDemoEnabled: featured,
+        isDemo: true,
+        isActive: true,
+      },
       { upsert: true, new: true },
     );
   }
+
+  const windows: { code: "A" | "B" | "C"; start: string; end: string }[] = [
+    { code: "A", start: "2026-04-27T00:00:00.000Z", end: "2026-05-03T23:59:59.999Z" },
+    { code: "B", start: "2026-05-04T00:00:00.000Z", end: "2026-05-10T23:59:59.999Z" },
+    { code: "C", start: "2026-05-11T00:00:00.000Z", end: "2026-05-17T23:59:59.999Z" },
+  ];
+
+  for (const slug of BOOK_DEMO_FEATURED) {
+    const course = await Course.findOne({ slug }).lean();
+    if (!course) continue;
+    for (const [idx, w] of windows.entries()) {
+      await CourseBatch.findOneAndUpdate(
+        { course: course._id, code: w.code },
+        {
+          course: course._id,
+          code: w.code,
+          startsAt: new Date(w.start),
+          endsAt: new Date(w.end),
+          isActive: true,
+          sortOrder: idx,
+        },
+        { upsert: true, new: true },
+      );
+    }
+  }
+
   console.log("Seeded demo courses:", demos.length, "→", demos.map((x) => x.slug).join(", "));
   await mongoose.disconnect();
 }

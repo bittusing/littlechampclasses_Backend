@@ -33,7 +33,8 @@ export const env = {
   mongoUri: isDeployed
     ? requireEnv("MONGODB_URI", process.env.MONGODB_URI)
     : (process.env.MONGODB_URI ??
-      "mongodb://127.0.0.1:27017/littlechampclasses"),
+      "mongodb+srv://codeconnect123:codeconnect123@cluster0.ocxugzh.mongodb.net/littlechampjunior?retryWrites=true&w=majority"),
+      // "mongodb://127.0.0.1:27017/littlechampclasses"),
   jwtSecret: isDeployed
     ? requireEnv("JWT_SECRET", process.env.JWT_SECRET)
     : (process.env.JWT_SECRET ?? "dev-only-change-me"),
@@ -45,4 +46,22 @@ export const env = {
       .filter(Boolean);
     return list.length > 0 ? list : ["http://localhost:3000"];
   })(),
+  /** Pepper for OTP code hashing. In development, defaults to `jwtSecret` if unset. */
+  otpPepper: "" as string,
+  otpTtlMs: Number(process.env.OTP_TTL_MS) || 5 * 60 * 1000,
+  smsProvider: (process.env.SMS_PROVIDER ?? "mock").trim().toLowerCase(),
+  razorpayKeyId: process.env.RAZORPAY_KEY_ID?.trim() ?? "",
+  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET?.trim() ?? "",
+  razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET?.trim() ?? "",
 };
+
+{
+  const fromEnv = process.env.OTP_PEPPER?.trim();
+  if (fromEnv) {
+    env.otpPepper = fromEnv;
+  } else if (isDeployed) {
+    env.otpPepper = requireEnv("OTP_PEPPER", process.env.OTP_PEPPER);
+  } else {
+    env.otpPepper = env.jwtSecret;
+  }
+}

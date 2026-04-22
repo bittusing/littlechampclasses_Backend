@@ -18,6 +18,10 @@ const courseSchema = new Schema(
     /** Second block of live classes (e.g. 6). */
     liveSessionsSecond: { type: Number, required: true, default: 6 },
     pricePaise: { type: Number, required: true, default: 500 },
+    /** Optional “was” price for UI (paise). Omit or null when not on sale. */
+    compareAtPricePaise: { type: Number, default: null },
+    /** When true, homepage card opens Book Demo flow (modal). */
+    bookDemoEnabled: { type: Boolean, default: false },
     isDemo: { type: Boolean, default: true },
     previewVideoUrl: { type: String, default: "" },
     thumbnailUrl: { type: String, default: "" },
