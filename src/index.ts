@@ -7,6 +7,7 @@ import { authRouter } from "./routes/auth.js";
 import { bookDemoRouter } from "./routes/bookDemo.js";
 import { bookingsRouter } from "./routes/bookings.js";
 import { coursesRouter } from "./routes/courses.js";
+import { interestRouter } from "./routes/interest.js";
 import { razorpayWebhookHandler } from "./routes/razorpayWebhook.js";
 import { usersRouter } from "./routes/users.js";
 
@@ -91,6 +92,13 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const interestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 25,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+});
+
 app.use(globalLimiter);
 
 app.use("/api/auth", authLimiter, authRouter);
@@ -98,6 +106,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/courses", coursesRouter);
 app.use("/api/bookings", bookingLimiter, bookingsRouter);
 app.use("/api/book-demo", otpLimiter, bookDemoRouter);
+app.use("/api/interest", interestLimiter, interestRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
