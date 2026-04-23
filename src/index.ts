@@ -71,13 +71,6 @@ const globalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 30,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-});
-
 const bookingLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 40,
@@ -101,7 +94,7 @@ const interestLimiter = rateLimit({
 
 app.use(globalLimiter);
 
-app.use("/api/auth", authLimiter, authRouter);
+app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/courses", coursesRouter);
 app.use("/api/bookings", bookingLimiter, bookingsRouter);

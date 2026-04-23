@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { env } from "./env.js";
+import { ensurePhoneOnlyUserIndexes } from "./migrations/legacyUserIndexes.js";
 
 /** Reuse connection across Vercel serverless invocations */
 interface MongooseCache {
@@ -26,6 +27,7 @@ export async function connectDb(): Promise<typeof mongoose> {
   }
   try {
     cache.conn = await cache.promise;
+    await ensurePhoneOnlyUserIndexes();
     return cache.conn;
   } catch (err) {
     cache.promise = null;
