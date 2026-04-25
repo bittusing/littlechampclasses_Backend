@@ -1,8 +1,18 @@
 import "dotenv/config";
+import { addDays } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
 import mongoose from "mongoose";
 import { env } from "../env.js";
+import { ClassSession } from "../models/ClassSession.js";
 import { Course } from "../models/Course.js";
 import { CourseBatch } from "../models/CourseBatch.js";
+import { Enrollment } from "../models/Enrollment.js";
+import { User } from "../models/User.js";
+import {
+  todayYmd,
+  weekRangeUtcFromMondayContaining,
+  ymdInTz,
+} from "../util/scheduleTime.js";
 import { buildDetailDescription } from "./seedData.js";
 
 const T = {
@@ -186,6 +196,107 @@ const demos = [
   },
 ];
 
+const QA_PHONE_E164 = "+919876543210";
+
+/**
+ * QA user + enrollment + class sessions for the current ISO week (Asia/Kolkata) on Learn English batch A.
+ */
+async function seedDashboardQaData() {
+  const tz = env.scheduleTz;
+  const course = await Course.findOne({ slug: "learn-english-demo" }).lean();
+  if (!course) return;
+
+  const batch = await CourseBatch.findOne({ course: course._id, code: "A" });
+  if (!batch) return;
+
+  const weekStart = addDays(new Date(), -14);
+  const weekEnd = addDays(new Date(), 60);
+  batch.startsAt = weekStart;
+  batch.endsAt = weekEnd;
+  await batch.save();
+
+  await User.findOneAndUpdate(
+    { phoneE164: QA_PHONE_E164 },
+    {
+      $setOnInsert: {
+        phoneE164: QA_PHONE_E164,
+        childName: "QA Learner",
+        learningGoal: "School Curriculum",
+        childGrade: 2,
+        profileComplete: true,
+      },
+    },
+    { upsert: true },
+  );
+
+  const user = await User.findOne({ phoneE164: QA_PHONE_E164 }).lean();
+  if (!user) return;
+
+  await Enrollment.findOneAndUpdate(
+    { user: user._id, batch: batch._id },
+    {
+      $set: {
+        status: "active",
+        source: "admin",
+        purchasedAt: new Date(),
+      },
+      $setOnInsert: {
+        user: user._id,
+        batch: batch._id,
+      },
+    },
+    { upsert: true },
+  );
+
+  await ClassSession.deleteMany({ batch: batch._id });
+
+  const ymdToday = todayYmd(tz);
+  const { weekStartUtc } = weekRangeUtcFromMondayContaining(ymdToday, tz);
+
+  function startsAtEvening(ymd: string, hour: number, minute: number): Date {
+    const [y, m, d] = ymd.split("-").map(Number);
+    return fromZonedTime(new Date(y, m - 1, d, hour, minute, 0, 0), tz);
+  }
+
+  let cursor = weekStartUtc;
+  const titles = [
+    "Sounds & rhythm warm-up",
+    "Story circle: brave mice",
+    "Phonics: blends practice",
+    "Show & tell rehearsal",
+    "Reading aloud together",
+    "Word games & movement",
+    "Weekly wrap & badges",
+  ];
+  const subjects = ["English", "English", "English", "English", "English", "English", "English"];
+
+  const docs = [];
+  for (let i = 0; i < 7; i += 1) {
+    const ymd = ymdInTz(cursor, tz);
+    docs.push({
+      batch: batch._id,
+      startsAt: startsAtEvening(ymd, 20, 0),
+      durationMinutes: i === 2 ? 97 : 60,
+      subject: subjects[i] ?? "English",
+      title: titles[i] ?? `Live class ${i + 1}`,
+      teacherName: "Mentor Priya",
+      teacherImageUrl: "",
+      statusMicrocopy: "Stay tuned! Class details will be added soon.",
+      hasAttachments: i % 3 === 0,
+      sortOrder: i,
+    });
+    cursor = addDays(cursor, 1);
+  }
+
+  await ClassSession.insertMany(docs);
+  console.log(
+    "[seed] Dashboard QA: user",
+    QA_PHONE_E164,
+    "enrolled in learn-english-demo batch A; class sessions for week of",
+    ymdToday,
+  );
+}
+
 async function run() {
   await mongoose.connect(env.mongoUri);
   for (const d of demos) {
@@ -229,6 +340,8 @@ async function run() {
       );
     }
   }
+
+  await seedDashboardQaData();
 
   console.log("Seeded demo courses:", demos.length, "→", demos.map((x) => x.slug).join(", "));
   await mongoose.disconnect();

@@ -53,6 +53,8 @@ export const env = {
   razorpayKeyId: process.env.RAZORPAY_KEY_ID?.trim() ?? "",
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET?.trim() ?? "",
   razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET?.trim() ?? "",
+  /** IANA timezone for schedule “today” / week boundaries (default Asia/Kolkata). */
+  scheduleTz: (process.env.SCHEDULE_TZ ?? "Asia/Kolkata").trim() || "Asia/Kolkata",
 };
 
 {

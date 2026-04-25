@@ -8,6 +8,7 @@ import { bookDemoRouter } from "./routes/bookDemo.js";
 import { bookingsRouter } from "./routes/bookings.js";
 import { coursesRouter } from "./routes/courses.js";
 import { interestRouter } from "./routes/interest.js";
+import { learnerMeRouter } from "./routes/learnerMe.js";
 import { razorpayWebhookHandler } from "./routes/razorpayWebhook.js";
 import { usersRouter } from "./routes/users.js";
 
@@ -96,6 +97,7 @@ app.use(globalLimiter);
 
 app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/me", learnerMeRouter);
 app.use("/api/courses", coursesRouter);
 app.use("/api/bookings", bookingLimiter, bookingsRouter);
 app.use("/api/book-demo", otpLimiter, bookDemoRouter);
