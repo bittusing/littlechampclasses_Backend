@@ -61,6 +61,10 @@ function mapSessionDto(s: {
   hasAttachments?: boolean;
 }) {
   const tz = env.scheduleTz;
+  const ymdToday = todayYmd(tz);
+  const ymdSession = ymdInTz(s.startsAt, tz);
+  const ymdTomorrow = ymdInTz(addDays(zonedDayStartUtc(ymdToday, tz), 1), tz);
+  const isTomorrow = ymdSession === ymdTomorrow;
   return {
     id: s._id.toString(),
     title: s.title,
@@ -73,6 +77,9 @@ function mapSessionDto(s: {
     teacherImageUrl: s.teacherImageUrl ?? "",
     statusMicrocopy: s.statusMicrocopy ?? "",
     hasAttachments: Boolean(s.hasAttachments),
+    scheduleDateYmd: ymdSession,
+    dayLabel: `${dayMonthLabelInTz(s.startsAt, tz)} · ${weekdayShortInTz(s.startsAt, tz)}`,
+    isTomorrow,
   };
 }
 
@@ -127,17 +134,43 @@ learnerMeRouter.get(
     }
 
     let todaySessions: ReturnType<typeof mapSessionDto>[] = [];
+    let upcomingSessions: ReturnType<typeof mapSessionDto>[] = [];
     if (effectiveBatchId) {
+      const batchOid = new mongoose.Types.ObjectId(effectiveBatchId);
       const t0 = zonedDayStartUtc(ymdToday, tz);
       const t1 = zonedDayEndExclusiveUtc(ymdToday, tz);
       const sessions = await ClassSession.find({
-        batch: new mongoose.Types.ObjectId(effectiveBatchId),
+        batch: batchOid,
         startsAt: { $gte: t0, $lt: t1 },
       })
         .sort({ startsAt: 1, sortOrder: 1 })
         .lean();
 
       todaySessions = sessions.map((s) =>
+        mapSessionDto({
+          _id: s._id,
+          title: s.title,
+          subject: s.subject,
+          startsAt: s.startsAt,
+          durationMinutes: s.durationMinutes,
+          teacherName: s.teacherName,
+          teacherImageUrl: s.teacherImageUrl,
+          statusMicrocopy: s.statusMicrocopy,
+          hasAttachments: s.hasAttachments,
+        }),
+      );
+
+      const upcomingStart = zonedDayEndExclusiveUtc(ymdToday, tz);
+      const upcomingEnd = addDays(upcomingStart, 7);
+      const upcomingRows = await ClassSession.find({
+        batch: batchOid,
+        startsAt: { $gte: upcomingStart, $lt: upcomingEnd },
+      })
+        .sort({ startsAt: 1, sortOrder: 1 })
+        .limit(50)
+        .lean();
+
+      upcomingSessions = upcomingRows.map((s) =>
         mapSessionDto({
           _id: s._id,
           title: s.title,
@@ -178,6 +211,7 @@ learnerMeRouter.get(
       defaultBatchId,
       selectedBatchId: effectiveBatchId,
       todaySessions,
+      upcomingSessions,
       weekHints: {
         todayYmd: ymdToday,
         weekMondayYmd: mondayYmd,
