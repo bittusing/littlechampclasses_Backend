@@ -28,6 +28,21 @@ const corsOrigins: string | string[] =
     ? env.frontendOrigins[0]!
     : env.frontendOrigins;
 
+const corsAllowed = new Set(env.frontendOrigins);
+
+/** Ensures error/404 JSON still gets CORS headers when Origin is allowed (avoids misleading browser CORS errors on 5xx). */
+function applyCorsIfAllowed(
+  req: express.Request,
+  res: express.Response,
+): void {
+  if (res.getHeader("Access-Control-Allow-Origin")) return;
+  const origin = req.headers.origin;
+  if (typeof origin === "string" && corsAllowed.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+}
+
 app.use(
   cors({
     origin: corsOrigins,
@@ -106,18 +121,20 @@ app.use("/api/book-demo", otpLimiter, bookDemoRouter);
 app.use("/api/interest", interestLimiter, interestRouter);
 app.use("/api/tests", testsRouter);
 
-app.use((_req, res) => {
+app.use((req, res) => {
+  applyCorsIfAllowed(req, res);
   res.status(404).json({ error: "Not found" });
 });
 
 app.use(
   (
     err: unknown,
-    _req: express.Request,
+    req: express.Request,
     res: express.Response,
     _next: express.NextFunction,
   ) => {
     console.error(err);
+    applyCorsIfAllowed(req, res);
     res.status(500).json({ error: "Internal server error" });
   },
 );
