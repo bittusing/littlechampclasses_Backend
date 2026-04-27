@@ -11,6 +11,7 @@ import { interestRouter } from "./routes/interest.js";
 import { learnerMeRouter } from "./routes/learnerMe.js";
 import { razorpayWebhookHandler } from "./routes/razorpayWebhook.js";
 import { usersRouter } from "./routes/users.js";
+import { testsRouter } from "./routes/tests.js";
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.get("/", (_req, res) => {
     service: "littlechampclasses-backend",
     api: "/api/health",
     courses: "/api/courses",
+    tests: "/api/tests",
   });
 });
 
@@ -102,6 +104,7 @@ app.use("/api/courses", coursesRouter);
 app.use("/api/bookings", bookingLimiter, bookingsRouter);
 app.use("/api/book-demo", otpLimiter, bookDemoRouter);
 app.use("/api/interest", interestLimiter, interestRouter);
+app.use("/api/tests", testsRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
