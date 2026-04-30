@@ -11,6 +11,7 @@ import { interestRouter } from "./routes/interest.js";
 import { learnerMeRouter } from "./routes/learnerMe.js";
 import { razorpayWebhookHandler } from "./routes/razorpayWebhook.js";
 import { usersRouter } from "./routes/users.js";
+import { testsRouter } from "./routes/tests.js";
 
 const app = express();
 
@@ -26,6 +27,21 @@ const corsOrigins: string | string[] =
   env.frontendOrigins.length === 1
     ? env.frontendOrigins[0]!
     : env.frontendOrigins;
+
+const corsAllowed = new Set(env.frontendOrigins);
+
+/** Ensures error/404 JSON still gets CORS headers when Origin is allowed (avoids misleading browser CORS errors on 5xx). */
+function applyCorsIfAllowed(
+  req: express.Request,
+  res: express.Response,
+): void {
+  if (res.getHeader("Access-Control-Allow-Origin")) return;
+  const origin = req.headers.origin;
+  if (typeof origin === "string" && corsAllowed.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+}
 
 app.use(
   cors({
@@ -58,6 +74,7 @@ app.get("/", (_req, res) => {
     service: "littlechampclasses-backend",
     api: "/api/health",
     courses: "/api/courses",
+    tests: "/api/tests",
   });
 });
 
@@ -102,19 +119,22 @@ app.use("/api/courses", coursesRouter);
 app.use("/api/bookings", bookingLimiter, bookingsRouter);
 app.use("/api/book-demo", otpLimiter, bookDemoRouter);
 app.use("/api/interest", interestLimiter, interestRouter);
+app.use("/api/tests", testsRouter);
 
-app.use((_req, res) => {
+app.use((req, res) => {
+  applyCorsIfAllowed(req, res);
   res.status(404).json({ error: "Not found" });
 });
 
 app.use(
   (
     err: unknown,
-    _req: express.Request,
+    req: express.Request,
     res: express.Response,
     _next: express.NextFunction,
   ) => {
     console.error(err);
+    applyCorsIfAllowed(req, res);
     res.status(500).json({ error: "Internal server error" });
   },
 );
